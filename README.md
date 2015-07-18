@@ -1,11 +1,22 @@
 ### cashe
 
-It's kind of maybe useful for making aliases and stuff.
+It's potentially kind of useful for making aliases... and stuff.
+
+#### Installation
+
+```
+$ git clone http://github.com/marchelzo/cashe.git
+$ sudo make install
+```
+
+#### Etymology
 
 The name is a pun on the word `case`, since `cashe` programs have
 a syntax similar to that of the `switch` / `case` statements found
 in a lot of popular programming languages. The `s` has become `sh`,
 since `cashe` passes commands to `$SHELL`.
+
+#### Usaget
 
 A `cashe` file looks like this:
 
