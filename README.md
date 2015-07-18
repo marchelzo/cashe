@@ -13,7 +13,7 @@ $ sudo make install
 
 The name is a pun on the word `case`, since `cashe` programs have
 a syntax similar to that of the `switch` / `case` statements found
-in a lot of popular programming languages. The `s` has become `sh`,
+in many popular programming languages. The `s` has become `sh`,
 since `cashe` passes commands to `$SHELL`.
 
 #### Usage
