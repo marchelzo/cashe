@@ -267,8 +267,6 @@ int main(int argc, char *argv[])
 
     execute(program);
 
-    fputs("\nexit\n", shell);
-
     pclose(shell);
 
     return 0;
