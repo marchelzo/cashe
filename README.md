@@ -16,7 +16,7 @@ a syntax similar to that of the `switch` / `case` statements found
 in a lot of popular programming languages. The `s` has become `sh`,
 since `cashe` passes commands to `$SHELL`.
 
-#### Usaget
+#### Usage
 
 A `cashe` file looks like this:
 
