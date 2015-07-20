@@ -15,14 +15,19 @@
 
 static FILE *f;
 static char buffer[BUFFER_SIZE];
-static char const *pname;
+static char **bound_parameters;
+static size_t *bp_indices;
+static size_t n_bound;
+static char *pname;
 static char **args;
+static size_t args_consumed;
 static size_t length;
 static size_t white;
 static bool use_previous_input;
 static size_t indent_amount;
 static FILE *shell;
 static char *shell_path;
+static char *bound_value;
 
 struct expression {
     enum { RULE, COMMAND } type;
@@ -53,7 +58,30 @@ noreturn static void invalid_space(void)
     exit(EXIT_FAILURE);
 }
 
-static bool blank(char const *s)
+noreturn static void pattern_error(char *p)
+{
+    fprintf(stderr, "%s: invalid pattern: `%s`\n", pname, p);
+    exit(EXIT_FAILURE);
+}
+
+static void bind_parameter(char *name, size_t arg_idx)
+{
+    static size_t alloc;
+
+    if (n_bound == alloc) {
+        alloc = alloc ? alloc * 2 : 1;
+        bound_parameters = realloc(bound_parameters, alloc * sizeof *bound_parameters);
+        bp_indices = realloc(bp_indices, alloc * sizeof *bp_indices);
+        if (!bp_indices || !bound_parameters) oom();
+    }
+
+    bound_parameters[n_bound] = name;
+    bp_indices[n_bound] = arg_idx;
+
+    n_bound += 1;
+}
+
+static bool blank(char *s)
 {
     while (*s)
         if (!isspace(*s++))
@@ -62,17 +90,69 @@ static bool blank(char const *s)
     return true;
 }
 
-static bool match(char const *pattern)
+static size_t recall_bound_value(char *var)
 {
-    if (!*args)
-        return !strcmp(pattern, "_");
+    size_t idx = 0;
+    while (isalnum(var[idx]))
+        idx += 1;
+    char tmp = var[idx];
+    var[idx] = 0;
 
-    if (!strcmp(pattern, *args)) {
-        args += 1;
-        return true;
+    for (size_t i = 0; i < n_bound; ++i) {
+        if (!strcmp(bound_parameters[i], var)) {
+            bound_value = args[bp_indices[i]];
+            var[idx] = tmp;
+            return idx;
+        }
     }
 
-    return false;
+    var[idx] = tmp;
+    return 0;
+}
+
+static bool match(char *pattern)
+{
+    if (!args[args_consumed])
+        return false;
+
+    size_t idx = 0;
+    size_t matched = 0;
+    size_t bound = 0;
+    size_t length = 0;
+    bool end = false;
+
+    while (pattern[idx] && !end) {
+        while (isspace(pattern[idx]))
+            idx += 1;
+        if (pattern[idx] == '<') {
+            idx += 1;
+            for (length = 0; isalnum(pattern[idx + length]); ++length);
+            if (pattern[idx + length] != '>')
+                pattern_error(pattern + idx);
+            pattern[idx + length] = 0;
+            bind_parameter(pattern + idx, args_consumed + matched);
+            bound += 1;
+            matched += 1;
+            idx += length + 1;
+        } else {
+            for (length = 0; isalnum(pattern[idx + length]); ++length);
+            if (!pattern[idx + length])
+                end = true;
+            else
+                pattern[idx + length] = 0;
+            if (!args[args_consumed + matched] || strcmp(args[args_consumed + matched], pattern + idx)) {
+                n_bound -= bound;
+                return false;
+            }
+
+            matched += 1;
+            idx += length + !end;
+        }
+    }
+
+    args_consumed += matched;
+
+    return true;
 }
 
 static size_t next_line(void)
@@ -89,7 +169,7 @@ static size_t next_line(void)
     return strlen(buffer);
 }
 
-static size_t leading_whitespace(char const *s)
+static size_t leading_whitespace(char *s)
 {
     size_t result = 0;
 
@@ -173,10 +253,11 @@ static struct expression **parse_program(void)
     return program;
 }
 
-static void write_to_shell(char const *s)
+static void write_to_shell(char *s)
 {
     bool in_string = false;
     bool in_dstring = false;
+    size_t id_length;
 
     while (*s) {
         if (*s == '\\') {
@@ -202,6 +283,12 @@ static void write_to_shell(char const *s)
             else
                 for (char **arg = args; arg[0]; ++arg)
                     fprintf(shell, "'%s'%s", arg[0], arg[1] ? " " : "");
+        } else if (!in_string && *s == '$' && (id_length = recall_bound_value(s + 1))) {
+            s += id_length + 1;
+            if (in_dstring)
+                fputs(bound_value, shell);
+            else
+                fprintf(shell, "'%s'", bound_value);
         } else {
             fputc(*s, shell);
             s += 1;
