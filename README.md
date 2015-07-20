@@ -23,8 +23,8 @@ A `cashe` file looks like this:
 ```bash
 #!/usr/local/bin/cashe 4
 
-loop:
-    for i in $(seq 5); do
+loop <n>:
+    for i in $(seq $n); do
         echo $i
     done
 
@@ -38,10 +38,11 @@ echo "None of the cases matched"
 If this file was called `test`, and it was executable, then I could use it in the following way:
 
 ```
-$ ./test loop
+$ ./test loop 5
 1
 2
 3
+4
 5
 
 $ ./test blah
@@ -66,12 +67,13 @@ watched:
     echo "$ARGS" >> ~/.watched_list
     cat ~/.watch_list | grep -v "$ARGS" | sponge ~/.watch_list
 list:
-    _:
-        cat -n ~/.watch_list
     seen:
         cat -n ~/.watched_list
+
     all:
         cat ~/.watch_list <(sed 's/$/ [SEEN]/' ~/.watched_list) | sort | cat -n
+
+    cat -n ~/.watch_list
 ```
 
 Now you've got the following commands:
