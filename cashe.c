@@ -127,8 +127,10 @@ static bool match(char *pattern)
         if (pattern[idx] == '<') {
             idx += 1;
             for (length = 0; isalnum(pattern[idx + length]); ++length);
-            if (pattern[idx + length] != '>')
-                pattern_error(pattern + idx);
+            if (pattern[idx + length] != '>') {
+                pattern[idx + length] = 0;
+                pattern_error(pattern + idx - 1);
+            }
             pattern[idx + length] = 0;
             bind_parameter(pattern + idx, args_consumed + matched);
             bound += 1;
@@ -259,6 +261,8 @@ static void write_to_shell(char *s)
     bool in_dstring = false;
     size_t id_length;
 
+    shell = stdout;
+
     while (*s) {
         if (*s == '\\') {
             fputc(*s, shell);
@@ -278,10 +282,10 @@ static void write_to_shell(char *s)
         } else if (!in_string && *s == '$' && !strncmp("ARGS", s + 1, 4) && !isalnum(s[5])) {
             s += 5;
             if (in_dstring)
-                for (char **arg = args; arg[0]; ++arg)
+                for (char **arg = args + args_consumed; arg[0]; ++arg)
                     fprintf(shell, "%s%s", arg[0], arg[1] ? " " : "");
             else
-                for (char **arg = args; arg[0]; ++arg)
+                for (char **arg = args + args_consumed; arg[0]; ++arg)
                     fprintf(shell, "'%s'%s", arg[0], arg[1] ? " " : "");
         } else if (!in_string && *s == '$' && (id_length = recall_bound_value(s + 1))) {
             s += id_length + 1;
