@@ -261,8 +261,6 @@ static void write_to_shell(char *s)
     bool in_dstring = false;
     size_t id_length;
 
-    shell = stdout;
-
     while (*s) {
         if (*s == '\\') {
             fputc(*s, shell);
