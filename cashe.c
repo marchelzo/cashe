@@ -316,7 +316,17 @@ int main(int argc, char *argv[])
 {
     pname = argv[0];
 
-    args = argv + 2;
+    if (argc < 2) {
+      fprintf(stderr, "%s: missing indentation amount argument\n", pname);
+      return 1;
+    }
+
+    if (argc < 3) {
+      fprintf(stderr, "%s: missing filename argument\n", pname);
+      return 1;
+    }
+
+    args = argv + 3;
 
     char *end;
     long long value = strtoll(argv[1], &end, 10);
@@ -328,21 +338,17 @@ int main(int argc, char *argv[])
 
     indent_amount = value;
 
-    if (isatty(fileno(stdin))) {
-        args += 1;
-        f = fopen(argv[2], "r");
-        if (!f) {
-            fprintf(stderr, "%s: failed to open file for reading: %s\n", pname, argv[1]);
-            return 1;
-        }
-    } else {
-        f = stdin;
+    f = fopen(argv[2], "r");
+
+    if (!f) {
+        fprintf(stderr, "%s: failed to open file for reading: %s\n", pname, argv[1]);
+        return 1;
     }
 
     struct expression **program = parse_program();
 
     if (!program) {
-        fprintf(stderr, "%s: failed to parse .iconfig file\n", pname);
+        fprintf(stderr, "%s: failed to parse cashe script\n", pname);
         return 1;
     }
 
